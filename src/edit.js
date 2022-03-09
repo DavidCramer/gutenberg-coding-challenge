@@ -7,7 +7,7 @@ import './editor.scss';
  * WordPress dependencies
  */
 import { edit, globe } from '@wordpress/icons';
-import { BlockControls } from '@wordpress/block-editor';
+import { useBlockProps, BlockControls } from '@wordpress/block-editor';
 import {
 	ComboboxControl,
 	Placeholder,
@@ -37,9 +37,10 @@ export default function Edit( { attributes, setAttributes } ) {
 		}
 	};
 
+	const blockProps = useBlockProps();
 
 	return (
-		<>
+		<div { ...blockProps }>
 			<BlockControls>
 				<ToolbarGroup>
 					<ToolbarButton
@@ -76,6 +77,6 @@ export default function Edit( { attributes, setAttributes } ) {
 					</Placeholder>
 				) }
 			</div>
-		</>
+		</div>
 	);
 }
