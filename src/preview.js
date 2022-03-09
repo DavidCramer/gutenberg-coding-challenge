@@ -2,9 +2,11 @@
  * WordPress dependencies
  */
 import { __, sprintf } from '@wordpress/i18n';
+
 /**
- * Internal dependencies
+ * WordPress dependencies
  */
+import RelatedPosts from './related';
 import countries from '../assets/countries.json';
 import continentNames from '../assets/continent-names.json';
 import continents from '../assets/continents.json';
@@ -33,34 +35,7 @@ export default function Preview( { countryCode, relatedPosts } ) {
 				), { continentNames[ continents[ countryCode ] ] }!
 			</h3>
 			<div className="xwp-country-card__related-posts">
-				<h3 className="xwp-country-card__related-posts__heading">
-					{ hasRelatedPosts
-						? sprintf(
-								__( 'There are %d related posts:' ),
-								relatedPosts.length
-						  )
-						: __( 'There are no related posts.' ) }
-				</h3>
-				{ hasRelatedPosts && (
-					<ul className="xwp-country-card__related-posts-list">
-						{ relatedPosts.map( ( relatedPost, index ) => (
-							<li key={ index } className="related-post">
-								<a
-									className="link"
-									href={ relatedPost.link }
-									data-post-id={ relatedPost.id }
-								>
-									<h3 className="title">
-										{ relatedPost.title }
-									</h3>
-									<p className="excerpt">
-										{ relatedPost.excerpt }
-									</p>
-								</a>
-							</li>
-						) ) }
-					</ul>
-				) }
+				<RelatedPosts country={ countries[ countryCode ] }/>
 			</div>
 		</div>
 	);

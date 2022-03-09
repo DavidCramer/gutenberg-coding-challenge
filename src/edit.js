@@ -44,30 +44,6 @@ export default function Edit( { attributes, setAttributes } ) {
 		}
 	};
 
-	useEffect( () => {
-		async function getRelatedPosts() {
-			const postId = window.location.href.match( /post=([\d]+)/ )[ 1 ];
-			const response = await window.fetch(
-				`/wp-json/wp/v2/posts?search=${ countries[ countryCode ] }&exclude=${ postId }`
-			);
-
-			if ( ! response.ok )
-				throw new Error( `HTTP error! Status: ${ response.status }` );
-
-			const posts = await response.json();
-
-			setAttributes( {
-				relatedPosts:
-					posts?.map( ( relatedPost ) => ( {
-						...relatedPost,
-						title: relatedPost.title?.rendered || relatedPost.link,
-						excerpt: relatedPost.excerpt?.rendered || '',
-					} ) ) || [],
-			} );
-		}
-
-		getRelatedPosts();
-	}, [ countryCode, setAttributes ] );
 
 	return (
 		<>
