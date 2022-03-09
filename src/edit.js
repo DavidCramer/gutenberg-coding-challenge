@@ -19,21 +19,14 @@ import { __ } from '@wordpress/i18n';
 import { getEmojiFlag } from './utils';
 import Preview from './preview';
 
+// Set options outside as not to have them build repeatedly.
+const options = Object.entries( countries ).map( ( entry ) => ( {
+	value: entry[0],
+	label: `${getEmojiFlag( entry[0] )} ${entry[1]} - ${entry[0]}`,
+} ) );
+
 export default function Edit( { attributes, setAttributes } ) {
-	const { countryCode, relatedPosts } = attributes;
-	const options = Object.keys( countries ).map( ( code ) => ( {
-		value: code,
-		label: getEmojiFlag( code ) + '  ' + countries[ code ] + ' — ' + code,
-	} ) );
-
-	const [ isPreview, setPreview ] = useState();
-
-	useEffect( () => setPreview( countryCode ), [ countryCode ] );
-
-	const handleChangeCountry = () => {
-		if ( isPreview ) setPreview( false );
-		else if ( countryCode ) setPreview( true );
-	};
+	const { countryCode } = attributes;
 
 	const handleChangeCountryCode = ( newCountryCode ) => {
 		if ( newCountryCode && countryCode !== newCountryCode ) {
@@ -52,16 +45,15 @@ export default function Edit( { attributes, setAttributes } ) {
 					<ToolbarButton
 						label={ __( 'Change Country', 'xwp-country-card' ) }
 						icon={ edit }
-						onClick={ handleChangeCountry }
+						onClick={ () => handleChangeCountryCode('') }
 						disabled={ ! Boolean( countryCode ) }
 					/>
 				</ToolbarGroup>
 			</BlockControls>
 			<div>
-				{ isPreview ? (
+				{ countryCode ? (
 					<Preview
 						countryCode={ countryCode }
-						relatedPosts={ relatedPosts }
 					/>
 				) : (
 					<Placeholder
