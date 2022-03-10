@@ -1,82 +1,122 @@
+/**
+ * Internal dependencies
+ */
 import countries from '../assets/countries.json';
 import './editor.scss';
+/**
+ * WordPress dependencies
+ */
 import { edit, globe } from '@wordpress/icons';
-import { BlockControls } from '@wordpress/block-editor';
-import { ComboboxControl, Placeholder, ToolbarButton, ToolbarGroup } from '@wordpress/components';
-import { getEmojiFlag } from './utils';
+import { useBlockProps, BlockControls } from '@wordpress/block-editor';
+import {
+	ComboboxControl,
+	Placeholder,
+	ToolbarButton,
+	ToolbarGroup,
+} from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { useSelect, select } from '@wordpress/data';
 import Preview from './preview';
+import { getEmojiFlag } from './utils';
+
+// Set options outside as not to have them build repeatedly.
+const options = Object.entries( countries ).map( ( entry ) => ( {
+	value: entry[ 0 ],
+	label: `${ getEmojiFlag( entry[ 0 ] ) } ${ entry[ 1 ] } - ${ entry[ 0 ] }`,
+} ) );
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { countryCode, relatedPosts } = attributes;
-	const options = Object.keys(countries).map(code => ({
-        value: code,
-        label:  getEmojiFlag( code ) + '  ' + countries[code] + ' — ' + code
-	}));
 
-	const [ isPreview, setPreview ] = useState();
-
-	useEffect( () => setPreview( countryCode ), [ countryCode ] );
-
-	const handleChangeCountry = () => {
-		if ( isPreview ) setPreview( false );
-		else if ( countryCode ) setPreview( true );
-	};
-
-	const handleChangeCountryCode = newCountryCode => {
-		if ( newCountryCode && countryCode !== newCountryCode ) {
+	const handleChangeCountryCode = ( newCountryCode ) => {
+		if ( countryCode !== newCountryCode ) {
 			setAttributes( {
 				countryCode: newCountryCode,
 				relatedPosts: [],
 			} );
 		}
 	};
+	const postID = select( 'core/editor' ).getCurrentPostId();
+	const blockProps = useBlockProps();
+	const related = useSelect(
+		( select ) => {
+			const country = countries[ countryCode ] || null;
+			const core = select( 'core' );
+			const queryArgs = [
+				'postType',
+				'post',
+				{
+					search: country || null,
+					exclude: postID,
+					stripTags: true,
+					_fields: [ 'id', 'link', 'title', 'excerpt' ],
+				},
+			];
+			return {
+				relatedPosts: country
+					? core.getEntityRecords( ...queryArgs )
+					: [],
+				isResolving: country
+					? core.getIsResolving( 'getEntityRecords', queryArgs )
+					: false,
+			};
+		},
+		[ countryCode, postID ]
+	);
 
 	useEffect( () => {
-		async function getRelatedPosts() {
-			const postId = window.location.href.match( /post=([\d]+)/ )[ 1 ];
-			const response = await window.fetch( `/wp-json/wp/v2/posts?search=${ countries[ countryCode ] }&exclude=${ postId }` );
-
-			if ( ! response.ok )
-				throw new Error( `HTTP error! Status: ${ response.status }` );
-
-			const posts = await response.json();
-
+		if ( ! related?.isResolving && related?.relatedPosts?.length ) {
+			const posts = related.relatedPosts.map( ( post ) => ( {
+				id: post.id,
+				link: post.link,
+				title: post.title.rendered,
+				excerpt: post.excerpt.rendered,
+			} ) );
 			setAttributes( {
-				relatedPosts: posts?.map( ( relatedPost ) => ( {
-					...relatedPost,
-					title: relatedPost.title?.rendered || relatedPost.link,
-					excerpt: relatedPost.excerpt?.rendered || '',
-				} ) ) || [],
+				relatedPosts: posts,
 			} );
 		}
-
-		getRelatedPosts();
-	}, [countryCode, setAttributes] );
-
+	}, [ related ] );
 	return (
-		<>
+		<div { ...blockProps }>
 			<BlockControls>
 				<ToolbarGroup>
-						<ToolbarButton label={ __( 'Change Country', 'xwp-country-card' ) }
-							icon={ edit } onClick={ handleChangeCountry } disabled={ ! Boolean( countryCode ) } />
+					<ToolbarButton
+						label={ __( 'Change Country', 'xwp-country-card' ) }
+						icon={ edit }
+						onClick={ () => handleChangeCountryCode( '' ) }
+						disabled={ ! Boolean( countryCode ) }
+					/>
 				</ToolbarGroup>
 			</BlockControls>
 			<div>
-				{ isPreview ? <Preview countryCode={ countryCode } relatedPosts={ relatedPosts }/> : <Placeholder icon={ globe } label={ __( 'XWP Country Card', 'xwp-country-card' ) }
-								 isColumnLayout={ true }
-								 instructions={ __( 'Type in a name of a contry you want to display on you site.', 'xwp-country-card' ) }>
+				{ countryCode ? (
+					<Preview
+						countryCode={ countryCode }
+						relatedPosts={ relatedPosts }
+					/>
+				) : (
+					<Placeholder
+						icon={ globe }
+						label={ __( 'XWP Country Card', 'xwp-country-card' ) }
+						isColumnLayout={ true }
+						instructions={ __(
+							'Type in a name of a contry you want to display on you site.',
+							'xwp-country-card'
+						) }
+					>
 						<ComboboxControl
 							label={ __( 'Country', 'xwp-country-card' ) }
-                            hideLabelFromVision
+							hideLabelFromVision
 							options={ options }
 							value={ countryCode }
 							onChange={ handleChangeCountryCode }
-                            allowReset={true}
+							allowReset={ true }
 						/>
-					</Placeholder> }
+					</Placeholder>
+				) }
 			</div>
-		</>
+		</div>
 	);
 }
