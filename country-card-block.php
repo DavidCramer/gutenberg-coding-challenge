@@ -35,7 +35,5 @@ function strip_content_maybe( $content ) {
 	return $content;
 }
 
-/**
- * Prevent passing excerpt through wpautop.
- */
-remove_filter( 'the_excerpt', 'wpautop' );
+add_filter( 'the_excerpt', __NAMESPACE__ . '\\strip_content_maybe', 10, 3 );
+add_filter( 'the_title', __NAMESPACE__ . '\\strip_content_maybe', 10, 3 );
