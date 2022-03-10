@@ -16,29 +16,68 @@ import {
 } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { getEmojiFlag } from './utils';
+import { useSelect, select } from '@wordpress/data';
 import Preview from './preview';
+import { getEmojiFlag } from './utils';
 
 // Set options outside as not to have them build repeatedly.
 const options = Object.entries( countries ).map( ( entry ) => ( {
-	value: entry[0],
-	label: `${getEmojiFlag( entry[0] )} ${entry[1]} - ${entry[0]}`,
+	value: entry[ 0 ],
+	label: `${ getEmojiFlag( entry[ 0 ] ) } ${ entry[ 1 ] } - ${ entry[ 0 ] }`,
 } ) );
 
 export default function Edit( { attributes, setAttributes } ) {
-	const { countryCode } = attributes;
+	const { countryCode, relatedPosts } = attributes;
 
 	const handleChangeCountryCode = ( newCountryCode ) => {
-		if ( newCountryCode && countryCode !== newCountryCode ) {
+		if ( countryCode !== newCountryCode ) {
 			setAttributes( {
 				countryCode: newCountryCode,
 				relatedPosts: [],
 			} );
 		}
 	};
-
+	const postID = select( 'core/editor' ).getCurrentPostId();
 	const blockProps = useBlockProps();
+	const related = useSelect(
+		( select ) => {
+			const country = countries[ countryCode ] || null;
+			const core = select( 'core' );
+			const queryArgs = [
+				'postType',
+				'post',
+				{
+					search: country || null,
+					exclude: postID,
+					stripTags: true,
+					_fields: [ 'id', 'link', 'title', 'excerpt' ],
+				},
+			];
+			return {
+				relatedPosts: country
+					? core.getEntityRecords( ...queryArgs )
+					: [],
+				isResolving: country
+					? core.getIsResolving( 'getEntityRecords', queryArgs )
+					: false,
+			};
+		},
+		[ countryCode, postID ]
+	);
 
+	useEffect( () => {
+		if ( ! related?.isResolving && related?.relatedPosts?.length ) {
+			const posts = related.relatedPosts.map( ( post ) => ( {
+				id: post.id,
+				link: post.link,
+				title: post.title.rendered,
+				excerpt: post.excerpt.rendered,
+			} ) );
+			setAttributes( {
+				relatedPosts: posts,
+			} );
+		}
+	}, [ related ] );
 	return (
 		<div { ...blockProps }>
 			<BlockControls>
@@ -46,7 +85,7 @@ export default function Edit( { attributes, setAttributes } ) {
 					<ToolbarButton
 						label={ __( 'Change Country', 'xwp-country-card' ) }
 						icon={ edit }
-						onClick={ () => handleChangeCountryCode('') }
+						onClick={ () => handleChangeCountryCode( '' ) }
 						disabled={ ! Boolean( countryCode ) }
 					/>
 				</ToolbarGroup>
@@ -55,6 +94,7 @@ export default function Edit( { attributes, setAttributes } ) {
 				{ countryCode ? (
 					<Preview
 						countryCode={ countryCode }
+						relatedPosts={ relatedPosts }
 					/>
 				) : (
 					<Placeholder
